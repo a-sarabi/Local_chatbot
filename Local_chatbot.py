@@ -9,9 +9,12 @@ from tkinter import scrolledtext, Scale, HORIZONTAL, filedialog
 import openai
 from PyPDF2 import PdfReader
 import os
+from groq import Groq
+import transformers
+import torch
 
-# Set your API key
-client = openai.OpenAI(api_key="Your Key Here")
+
+
 messages = []  # Global list to keep track of all conversation history
 last_role = None  # To track last used role
 last_file_paths = []  # To track last processed files
@@ -45,6 +48,9 @@ def submit_action(event=None):
     last_role = role
     last_file_paths = file_paths.copy()
 
+    # Scroll to the end of the conversation
+    conversation_display.see(tk.END)
+
 
 def process_input(role, user_input, temperature):
     global last_role, last_file_paths, messages
@@ -59,6 +65,8 @@ def process_input(role, user_input, temperature):
 
     selected_model = model_var.get()
     if selected_model == "GPT-4":
+        # Set your API key
+        client = openai.OpenAI(api_key="......")
         response = client.chat.completions.create(
             model="gpt-4-1106-vision-preview",
             temperature=temperature,
@@ -84,9 +92,26 @@ def process_input(role, user_input, temperature):
 
         update_conversation()
 
+
+    elif selected_model == "Groq":
+        # Set your API key
+        client = Groq(api_key="......")
+
+        response = client.chat.completions.create(
+            model="llama3-8b-8192",
+            temperature=temperature,
+            messages=messages,
+            )
+
+        conversation_display.config(state=tk.NORMAL)
+        conversation_display.insert(tk.END, response.choices[0].message.content)
+        conversation_display.config(state=tk.DISABLED)
+
+
+
+
     elif selected_model == "LLAMA 3":
-        import transformers
-        import torch
+
 
         model_id = "unsloth/llama-3-8b-Instruct-bnb-4bit"
         pipeline = transformers.pipeline(
@@ -172,7 +197,7 @@ message_entry.pack(fill=tk.X, padx=5, pady=5)
 message_entry.bind("<Return>", submit_action)  # Bind the Enter key to submit action
 
 # model selection
-model_options = ["GPT-4", "LLAMA 3"]
+model_options = ["GPT-4", "LLAMA 3", "Groq"]
 model_var = tk.StringVar(root)
 model_var.set(model_options[0])  # default value
 model_label = tk.Label(root, text="Select Model:")
